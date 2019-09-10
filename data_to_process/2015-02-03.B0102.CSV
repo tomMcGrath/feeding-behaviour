@@ -1,0 +1,16 @@
+OXYMAX CSV FEEDING BOUTS DATA FILE 
+
+CSV FILE CREATION:04/02/2015 13:23:27
+DATA FILENAME:C:\Program Files\Oxymax\Recordings\E.Spreckley\03-02-15\2015-02-03.BDTA
+
+GROUP/CAGE:0102
+SUBJECT ID:Subject 2
+SUBJECT MASS:403 grams
+
+
+
+:DATA
+===============,===============,===============,===============,===============,===============,===============,===============,===============,
+COUNT,INTERVAL,CHANNEL,DATE,START,END,DURATION,WEIGHT,ACCUM,
+#,#,#,,,,seconds,grams,grams,
+===============,===============,===============,===============,===============,===============,===============,===============,===============,
