@@ -1,4 +1,4 @@
-# Open-sourced code for "A mathematical model of feeding in rodents predicts food intake and offers novel insight into feeding behaviour"
+# Open-sourced code for "The homeostatic dynamics of feeding behaviour identify novel mechanisms of anorectic agents"
 
 This repo contains the code and data necessary to replicate the figures and analyses in the paper. Preprints are available at biorxiv and arxiv [ADD LINKS].
 
