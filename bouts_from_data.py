@@ -18,7 +18,7 @@ def get_ts(bout_data):
     """
     events = []
     gut_ts_holder = []
-    g_start = 0.0 # initialise to 0.0     
+    g_start = 0.0 # initialise to 0.0
     for i, bout in enumerate(bout_data):
         #print bout
         if i != len(bout_data) - 1:
@@ -26,8 +26,8 @@ def get_ts(bout_data):
             Record feeding -> pause -> feeding cycle (this is what we need
             to assign to short or long pause)
             Format:
-            (feeding length, stomach at start of feeding, feeding rate,
-            pause length, stomach at start of pause)
+            (feeding length, fullness at start of feeding, feeding rate,
+            pause length, fullness at start of pause)
             """
             t_start = bout[0]
             t_end = bout[1]
@@ -42,12 +42,12 @@ def get_ts(bout_data):
             else:
                 period = 'L' # light period
 
-            
-            feeding_interval = np.linspace(0, f_length, f_length) # want at 1s resolution 
+
+            feeding_interval = np.linspace(0, f_length, f_length) # want at 1s resolution
             pause_interval = np.linspace(0, p_length, p_length) # as above
-            
+
             rate = float(bout[2])/f_length
-            
+
             """
             Now solve ODE on feeding
             """
@@ -56,7 +56,7 @@ def get_ts(bout_data):
             g_end_feeding = g_feeding[:,0][-1]
 
             gut_ts_holder.append(np.stack(g_feeding, axis=1)[0]) # need to get the ts as an array
-            
+
             g_digestion = integrate.odeint(odes.digestion_ode, g_end_feeding, pause_interval, args=(k1,))
             g_digestion = g_digestion.clip(min=0) # remove the small numerical errors bring it < 0
             g_end = g_digestion[:,0][-1]
@@ -67,13 +67,13 @@ def get_ts(bout_data):
             Store time from start for conditional export
             """
             t_from_start = float((t_start - exp_start).total_seconds())/3600.
-            
+
             """
             Append
             """
             event = [f_length, g_start, rate, p_length, g_end_feeding, period, t_from_start]
             events.append(event)
-            
+
             """
             Setup for the next go round the loop
             """
@@ -96,7 +96,7 @@ def get_events(bout_data):
     """
     events = []
     gut_ts_holder = []
-    g_start = 0.0 # initialise to 0.0     
+    g_start = 0.0 # initialise to 0.0
     for i, bout in enumerate(bout_data):
         #print bout
         if i != len(bout_data) - 1:
@@ -104,8 +104,8 @@ def get_events(bout_data):
             Record feeding -> pause -> feeding cycle (this is what we need
             to assign to short or long pause)
             Format:
-            (feeding length, stomach at start of feeding, feeding rate,
-            pause length, stomach at start of pause)
+            (feeding length, fullness at start of feeding, feeding rate,
+            pause length, fullness at start of pause)
             """
             t_start = bout[0]
             t_end = bout[1]
@@ -121,19 +121,19 @@ def get_events(bout_data):
                 period = 'L' # light period
 
             #print t_start, t_end, t_next, f_length, p_length
-            
-            feeding_interval = np.linspace(0, f_length, f_length) # want at 1s resolution 
+
+            feeding_interval = np.linspace(0, f_length, f_length) # want at 1s resolution
             pause_interval = np.linspace(0, p_length, p_length) # as above
-            
+
             rate = float(bout[2])/f_length
-            
+
             """
             Now solve ODE on feeding
             """
             ## Feeding
             g_end_feeding = g_start + 3.5*rate*f_length # calorie content 3.5 kcal/g
-            
-            ## Pausing 
+
+            ## Pausing
             t_c = 2.*np.sqrt(g_end_feeding)/k1
 
             if p_length <= t_c:
@@ -146,23 +146,23 @@ def get_events(bout_data):
             Store time from start for conditional export
             """
             t_from_start = float((t_start - exp_start).total_seconds())/3600.
-            
+
             """
             Append
             """
-            event = [f_length, 
-                     g_start, 
-                     rate, 
-                     p_length, 
-                     g_end_feeding, 
-                     period, 
-                     t_from_start, 
-                     bout[0], 
-                     bout[1], 
+            event = [f_length,
+                     g_start,
+                     rate,
+                     p_length,
+                     g_end_feeding,
+                     period,
+                     t_from_start,
+                     bout[0],
+                     bout[1],
                      bout[2]]
 
             events.append(event)
-            
+
             """
             Setup for the next go round the loop
             """

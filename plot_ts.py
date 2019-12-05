@@ -111,8 +111,8 @@ def plot_ts(num_id, subject_id, mass, bout_data):
 			Record feeding -> pause -> feeding cycle (this is what we need
 			to assign to short or long pause)
 			Format:
-			(feeding length, stomach at start of feeding, feeding rate,
-			pause length, stomach at start of pause)
+			(feeding length, fullness at start of feeding, feeding rate,
+			pause length, fullness at start of pause)
 			"""
 			t_start = bout[0]
 			t_end = bout[1]
@@ -212,7 +212,7 @@ def plot_ts(num_id, subject_id, mass, bout_data):
 	"""
 	## Axis labels
 	ax.set_ylabel('Food intake (kcal/s)')
-	ax2.set_ylabel('Stomach fullness (kcal)')
+	ax2.set_ylabel('Fullness (kcal)')
 
 	plt.show()
 

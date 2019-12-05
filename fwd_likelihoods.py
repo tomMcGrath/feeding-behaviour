@@ -10,7 +10,7 @@ def phi_const(theta):
 
 def phi_F(t, x0, rate, theta1):
     """
-    Linear rate function based on stomach fullness
+    Linear rate function based on fullness
     """
     x = rate*t + x0
 

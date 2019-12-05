@@ -18,7 +18,7 @@ Figure prelims
 def compare_sample(df, data_dict, varlist, idx):
 	fig, axes = plt.subplots(1, figsize=(5,5))
 	var = varlist[idx]
-	
+
 	def compare(row):
 		x = row[var]
 		filename = helpers.get_filename(row)
@@ -36,7 +36,7 @@ Figure 1
 def ts_from_data(data):
 	k1 = 0.00055
 	bout_ts_holder = [[0]]
-	stomach_ts_holder = [[0]]
+	fullness_ts_holder = [[0]]
 
 	## Generate the base time series
 	for event in data:
@@ -47,29 +47,29 @@ def ts_from_data(data):
 		bout_ts_holder.append(rate*np.ones(int(f_length)))
 		bout_ts_holder.append(np.zeros(int(p_length)))
 
-		## Stomach ts holder gets a linearly increasing line at rate for f_length
+		## fullness ts holder gets a linearly increasing line at rate for f_length
 		## then decreases according to the ODE
-		g_start = stomach_ts_holder[-1][-1]
-		stomach_ts_holder.append(g_start + 3.5*rate*(1+np.arange(int(f_length)))) # feeding
+		g_start = fullness_ts_holder[-1][-1]
+		fullness_ts_holder.append(g_start + 3.5*rate*(1+np.arange(int(f_length)))) # feeding
 
-		g_end = stomach_ts_holder[-1][-1]
-		t_c = 2.*np.sqrt(g_end)/k1		
-		
+		g_end = fullness_ts_holder[-1][-1]
+		t_c = 2.*np.sqrt(g_end)/k1
+
 		if p_length <= t_c:
 			digestion_ts = 0.25*np.power((2.*np.sqrt(g_end) - k1*(1+np.arange(int(p_length)))), 2)
-			stomach_ts_holder.append(digestion_ts)
+			fullness_ts_holder.append(digestion_ts)
 
 		else:
 			digestion_ts1 = 0.25*np.power((2.*np.sqrt(g_end) - k1*(1+np.arange(int(t_c)))), 2)
 			digestion_ts2 = np.zeros(int(p_length - t_c))
-			stomach_ts_holder.append(digestion_ts1)
-			stomach_ts_holder.append(digestion_ts2)
+			fullness_ts_holder.append(digestion_ts1)
+			fullness_ts_holder.append(digestion_ts2)
 
 	## Create a time series from the time series holder
 	bout_ts = np.hstack(bout_ts_holder)
-	stomach_ts = np.hstack(stomach_ts_holder)
+	fullness_ts = np.hstack(fullness_ts_holder)
 
-	return bout_ts, stomach_ts
+	return bout_ts, fullness_ts
 
 def timeseries_predict_plot(data, thetas, predict_index, num_samples=100, tmax=60*60):
 	k1 = 0.00055
@@ -77,9 +77,9 @@ def timeseries_predict_plot(data, thetas, predict_index, num_samples=100, tmax=6
 	theta8 = np.power(10., thetas[7])
 	fig, axes = plt.subplots(2,1, figsize=(10,5))
 
-	bout_ts, stomach_ts = ts_from_data(data)
+	bout_ts, fullness_ts = ts_from_data(data)
 	x_bout_sec = np.arange(len(bout_ts))
-	x_stom_sec = np.arange(len(stomach_ts))
+	x_stom_sec = np.arange(len(fullness_ts))
 
 	x_bout_min = x_bout_sec/60
 	x_stom_min = x_stom_sec/60
@@ -89,10 +89,10 @@ def timeseries_predict_plot(data, thetas, predict_index, num_samples=100, tmax=6
 
 	## Plot the time series
 	axes[0].plot(x_bout_sec/60., bout_ts)
-	axes[1].plot(x_stom_sec/60., stomach_ts)
+	axes[1].plot(x_stom_sec/60., fullness_ts)
 
 	#ax2 = axes[1].twinx()
-	
+
 	## Now do the posterior prediction of next mealtime
 	## Get the time of the start of the intermeal interval we wish to predict
 	known_events = data[:predict_index]
@@ -101,7 +101,7 @@ def timeseries_predict_plot(data, thetas, predict_index, num_samples=100, tmax=6
 		start_time += event[0] + event[3]
 
 	start_time += known_events[-1][0] # add the g_end_feeding
-	x0 = stomach_ts[int(start_time)]
+	x0 = fullness_ts[int(start_time)]
 
 	next_times = []
 	i = 0
@@ -118,15 +118,15 @@ def timeseries_predict_plot(data, thetas, predict_index, num_samples=100, tmax=6
 	#ax2.hist(next_times, histtype='step', color='r', bins=100, normed=True)
 
 	## KDE of results
-	x_grid = np.arange(len(stomach_ts))
+	x_grid = np.arange(len(fullness_ts))
 	kde = scipy.stats.gaussian_kde(next_times, bw_method='silverman')
 	y = kde.evaluate(x_grid)
 	ax2.plot(x_grid[int(start_time):]/60., y[int(start_time):], c='r')
 	ax2.fill_between(x_grid[int(start_time):30000]/60., 0, y[int(start_time):30000], color='r', alpha=0.3)
 	ax2.set_ylim([0, 2.5*np.max(y)])
 	ax2.set_yticklabels([])
-	
-	## Predict samples of stomach fullness
+
+	## Predict samples of fullness fullness
 	ts_predictions = []
 	i = 0
 	while i < num_samples:
@@ -140,7 +140,7 @@ def timeseries_predict_plot(data, thetas, predict_index, num_samples=100, tmax=6
 	## Plot mean
 	mean_ts = np.mean(ts_predictions, axis=0)
 	axes[1].plot(x/60., mean_ts, c='r')
-	
+
 	## Plot percentile
 	"""
 	pc = 5
@@ -148,22 +148,22 @@ def timeseries_predict_plot(data, thetas, predict_index, num_samples=100, tmax=6
 	max_val = np.percentile(ts_predictions, 100-pc, axis=0)
 	axes[1].fill_between(x, min_val, max_val, alpha=0.3, color='r')
 	"""
-	
+
 	# ## Plot samples
 	for i in range(5):
 		axes[1].plot(x/60., ts_predictions[i, :], c='r', alpha=0.3)
 
 	# plt.subplots_adjust(hspace=0.1)
-	
+
 	return fig, axes, ax2
 
 def timeseries_inset(data, predict_index):
 	k1 = 0.00055
 	fig, axes = plt.subplots(1,1, figsize=(3,3))
 
-	bout_ts, stomach_ts = ts_from_data(data)
+	bout_ts, fullness_ts = ts_from_data(data)
 	x_bout_sec = np.arange(len(bout_ts))
-	x_stom_sec = np.arange(len(stomach_ts))
+	x_stom_sec = np.arange(len(fullness_ts))
 
 	x_bout_min = x_bout_sec/60
 	x_stom_min = x_stom_sec/60
@@ -173,7 +173,7 @@ def timeseries_inset(data, predict_index):
 
 	## Plot the time series
 	axes.plot(x_bout_sec/60., bout_ts)
-	
+
 	return fig, axes
 
 def plot_ethogram(folder, num_animals, maxlen=None, downsample=10, ysize=50):
@@ -187,21 +187,21 @@ def plot_ethogram(folder, num_animals, maxlen=None, downsample=10, ysize=50):
 
 		filepath = folder + '/' + filename
 		data = np.loadtxt(filepath, delimiter='\t', usecols=(0,1,2,3,4))
-		bout_ts, stomach_ts = ts_from_data(data)
+		bout_ts, fullness_ts = ts_from_data(data)
 
 		## Set the feeding to binary and downsample
 		bout_ts = bout_ts[:maxlen] > 0.0
 		bout_ts = bout_ts[::downsample]
 
-		## Downsample the stomach fullness
-		stomach_ts = stomach_ts[:maxlen]
-		stomach_ts = stomach_ts[::downsample]
+		## Downsample the fullness fullness
+		fullness_ts = fullness_ts[:maxlen]
+		fullness_ts = fullness_ts[::downsample]
 
 		## Make rasterplot of bouts
 		x = np.outer(np.ones(ysize), bout_ts)
 		axes[2*i].matshow(x, cmap=cm.Greys)
-		## Plot stomach fullness
-		y = np.outer(np.ones(ysize), stomach_ts)
+		## Plot fullness fullness
+		y = np.outer(np.ones(ysize), fullness_ts)
 		axes[2*i + 1].matshow(y, cmap=cm.YlOrRd)
 
 	for i in range(2*num_animals):
@@ -392,7 +392,7 @@ def IMI_fullness(df, cutoff=300):
 	df.apply(fullness_IMI, axis=1)
 
 	## Axes labels etc
-	axes.set_xlabel('Stomach fullness')
+	axes.set_xlabel('fullness fullness')
 	axes.set_ylabel('Observed IMI')
 
 	axes.set_yscale('log')
@@ -501,10 +501,10 @@ def predict_IMI_full_post(df, data_dict, num_resamples=1, cutoff=300):
 		## Plot the results
 		axes.scatter(true_IMIs, indiv_predicts, c=row['drug_c'], marker=row['ms'])
 		"""
-		axes.errorbar(true_IMIs, 
-					  indiv_predicts, 
-					  yerr=indiv_errs, 
-					  c=row['drug_c'], 
+		axes.errorbar(true_IMIs,
+					  indiv_predicts,
+					  yerr=indiv_errs,
+					  c=row['drug_c'],
 					  fmt='o',
 					  marker=row['ms'])
 		"""
@@ -590,7 +590,7 @@ def intake_fullness(df, cutoff=300):
 	def plot_meals(row):
 		## Import the meal data for this animal
 		data = helpers.data_from_row(row)
-		
+
 		## Iterate through the bouts, storing meal data once pause length exceeds cutoff
 		mealsizes = []
 		gut_ends = []
@@ -616,7 +616,7 @@ def intake_fullness(df, cutoff=300):
 	df.apply(plot_meals, axis=1)
 
 	## Set labels etc
-	axes.set_xlabel('Stomach fullness at meal termination (kcal)')
+	axes.set_xlabel('Fullness at meal termination (kcal)')
 	axes.set_ylabel('Meal size (kcal)')
 
 
@@ -632,7 +632,7 @@ def fullness_IMI(df, cutoff=300, exp_param=1.5):
 
 		for event in data:
 			f_length, g_start, rate, p_length, g_end_feeding = event
-			
+
 			#p_lengths.append(np.log10(p_length))
 			if p_length < cutoff:
 				p_lengths.append(p_length)
@@ -656,7 +656,7 @@ def fullness_IMI(df, cutoff=300, exp_param=1.5):
 
 def plot_IMI(data_dir, data_dict, cutoff=300, num_samples=10, windowsize=2):
     err_thresh = 20000
-    
+
     p_lengths = []
     g_ends = []
     c = []
@@ -698,18 +698,18 @@ def plot_IMI(data_dir, data_dict, cutoff=300, num_samples=10, windowsize=2):
 
     ## Plot moving window
     fig, axes = plt.subplots(1, figsize=(5,5))
-    axes.scatter(results[:,0], 
-                 results[:,1], 
-                 alpha=0.3, 
+    axes.scatter(results[:,0],
+                 results[:,1],
+                 alpha=0.3,
                  c='b', # use c=c to get individual colour coding
                  cmap=cm.gist_ncar)
-    
+
     axes.plot(x_grid, means, c='k')
-    
+
     ## Generate posterior predictive curve
     post = data_dict[data_dir.split('/')[1]+'_trace.p']
     post = np.mean(post, axis=0)
-    
+
     mean_ppcs = []
     ppcs_low = []
     ppcs_high = []
@@ -721,13 +721,13 @@ def plot_IMI(data_dir, data_dict, cutoff=300, num_samples=10, windowsize=2):
             theta7 = np.power(10., post[6])
             theta8 = np.power(10., post[7])
             samples.append(fl.sample_L(xval, k1, theta7, theta8)/60) # convert to minutes
-            
+
         mean_ppcs.append(np.mean(samples))
         ppc_low = np.percentile(samples, 5)
         ppc_high = np.percentile(samples, 95)
         ppcs_low.append(ppc_low)
         ppcs_high.append(ppc_high)
-        
+
     axes.plot(sample_x_grid, mean_ppcs, c='r')
     axes.fill_between(sample_x_grid, ppcs_low, ppcs_high, color='r', alpha=0.3)
 
@@ -748,17 +748,17 @@ def plot_satiety_ratio(data_dir, cutoff=300, windowsize=2):
         mealnum = 0
         mealsize = 0
         for j in data:
-            
+
             f_length, g_start, rate, p_length, g_end = j
             mealsize += 3.5*rate*f_length
-            
+
             if p_length > cutoff and p_length < err_thresh:
                 p_lengths.append(p_length/60) # convert to minutes
                 mealsizes.append(mealsize)
 
                 if mealnum == 0:
                 	ratios.append(float(p_length/60)/mealsize) # convert to minutes
-                	
+
                 mealsize = 0
                 c.append(float(i)/count)
 
@@ -780,19 +780,19 @@ def plot_satiety_ratio(data_dir, cutoff=300, windowsize=2):
         usevals = np.abs(results[:,0] - xval) < windowsize
         meanval = np.mean(results[usevals, 1])
         means.append(meanval)
-        
+
     means = np.array(means)
 
     ## Plot moving window
     fig, axes = plt.subplots(1, figsize=(5,5))
-    axes.scatter(results[:,0], 
-                 results[:,1], 
-                 alpha=0.3, 
-                 c='b', 
+    axes.scatter(results[:,0],
+                 results[:,1],
+                 alpha=0.3,
+                 c='b',
                  cmap=cm.gist_ncar)
-    
+
     axes.plot(x_grid, means, c='k')
-    
+
     ## Calculate satiety ratio
     """
     srs = []
@@ -807,10 +807,10 @@ def plot_satiety_ratio(data_dir, cutoff=300, windowsize=2):
     satiety_ratio = np.mean(ratios)
     print satiety_ratio
 
-    
+
     ratio_predict = x_grid*satiety_ratio
     axes.plot(x_grid, ratio_predict, c='r')
-    
+
     return fig, axes
 
 def IMI_inset(theta7, theta8, num_samples=100, figsize=(2,2), c='b'):
@@ -843,7 +843,9 @@ def termination_prob(data_dict):
 		data = key.split('_')[:-1]
 		c = helpers.get_colour(data)
 
-		sig_min, sig_mean, sig_max, sig_int = helpers.get_Q(x_vals, theta4, theta5)
+		print(theta4)
+
+		sig_min, sig_mean, sig_max, sig_int = fl.Q(x_vals, theta4, theta5)
 
 		axes.plot(x_vals, sig_mean, c=c)
 
@@ -870,7 +872,7 @@ def param_change_effect(data_dict, indivs, param_idx, delta, num_samples=100, du
 		post = np.mean(post, axis=0)
 		perturbed_params = np.copy(post)
 		perturbed_params[param_idx] = perturbed_params[param_idx] + delta
-		
+
 		baseline_samples = []
 		perturbed_samples = []
 		for j in range(num_samples):
@@ -917,11 +919,11 @@ def meals_from_data(data, cutoff=300):
     mealdurs = []
     p_lengths = []
     for event in data:
-        
+
         f_length, g_start, rate, p_length, g_end = event
         mealsize += 3.5*rate*f_length
         mealdur += f_length
-        
+
         if p_length > cutoff:
             p_lengths.append(p_length)
 
@@ -1099,13 +1101,13 @@ def param_delta_curve(data_dict, indivs, param_idx, delta_range, num_samples=100
 			## Intermeal interval
 			y4.append(np.mean(sample_IMIs))
 			#y4_min.append(np.percentile(sample_IMIs, 5))
-			#y4_max.append(np.percentile(sample_IMIs, 95))			
+			#y4_max.append(np.percentile(sample_IMIs, 95))
 
 			## Meal count
-			#print meal_counts	
+			#print meal_counts
 			y5.append(np.mean(meal_counts))
 			#y5_min.append(np.percentile(meal_counts, 5))
-			#y5_max.append(np.percentile(meal_counts, 95))	
+			#y5_max.append(np.percentile(meal_counts, 95))
 
 		axes[0].plot(delta_range, y1, c=c, marker='o')
 		#axes[0].fill_between(delta_range, y1_min, y1_max, alpha=0.1, color=c)
@@ -1139,7 +1141,7 @@ def dosing_protocol(data_dict, protocol, num_samples=10, cutoff=300):
 	xax = np.arange(len(ts_mean))
 	axes.plot(ts_mean, c='r')
 	axes.fill_between(xax,
-					  ts_pc[0], 
+					  ts_pc[0],
 					  ts_pc[1],
 					  color='r',
 					  alpha=0.3)
@@ -1183,7 +1185,7 @@ def optimise_protocols(data_dict, druglist, protocol_size, duration, min_default
 	amounts_to_plot = np.array(amounts_to_plot)/(1.*duration*protocol_size) # convert to kcal/hr
 	axes[0].scatter(xax, amounts_to_plot) # could do errorbar for SEM if necessary/useful
 
-	## Plot optimal & pessimal protocol stomach fullness
+	## Plot optimal & pessimal protocol fullness fullness
 	protocols_to_rank = zip(mean_amounts, time_series)
 	ranked_protocols = sorted(protocols_to_rank, key=lambda x:x[0])
 	opt_protocol = ranked_protocols[0]
@@ -1199,20 +1201,20 @@ def optimise_protocols(data_dict, druglist, protocol_size, duration, min_default
 	pess_pc = pess_protocol[1][1]
 	pess_pc_low = pess_pc[0]
 	pess_pc_high = pess_pc[1]
-	
+
 	xax = np.arange(len(opt_mean))
 	xax = xax/60.
 
 	axes[1].plot(xax, opt_mean, c='b')
 	axes[1].fill_between(xax,
-				  		 opt_pc_low, 
+				  		 opt_pc_low,
 				  		 opt_pc_high,
 				  		 color='b',
 				  		 alpha=0.3)
 
 	axes[1].plot(xax, pess_mean, c='r')
 	axes[1].fill_between(xax,
-			  		 	 pess_pc_low, 
+			  		 	 pess_pc_low,
 			  			 pess_pc_high,
 			  			 color='r',
 			  			 alpha=0.3)
@@ -1232,7 +1234,7 @@ def behav_change_effect_group(data_dict, groupname, xmax, num_samples=100, durat
 
 	post = data_dict[groupname]
 	post = np.mean(post, axis=0)
-	
+
 	baseline_samples = []
 	perturbed_samples = []
 	for i in range(num_samples):
@@ -1342,13 +1344,13 @@ def behav_response_curve(data_dict, indivs, delta_range, num_samples=100, durati
 			## Intermeal interval
 			y4.append(np.mean(sample_IMIs))
 			#y4_min.append(np.percentile(sample_IMIs, 5))
-			#y4_max.append(np.percentile(sample_IMIs, 95))			
+			#y4_max.append(np.percentile(sample_IMIs, 95))
 
 			## Meal count
-			#print meal_counts	
+			#print meal_counts
 			y5.append(np.mean(meal_counts))
 			#y5_min.append(np.percentile(meal_counts, 5))
-			#y5_max.append(np.percentile(meal_counts, 95))	
+			#y5_max.append(np.percentile(meal_counts, 95))
 
 		axes[0].plot(delta_range, y1, c=c, marker='o')
 		#axes[0].fill_between(delta_range, y1_min, y1_max, alpha=0.1, color=c)
@@ -1435,10 +1437,10 @@ def refractory_period(data_dict, indivs, period_range, num_samples=100, duration
 			## Intermeal interval
 			y4.append(np.mean(sample_IMIs)/60.) # convert to minutes
 			#y4_min.append(np.percentile(sample_IMIs, 5))
-			#y4_max.append(np.percentile(sample_IMIs, 95))			
+			#y4_max.append(np.percentile(sample_IMIs, 95))
 
 			## Meal count
-			#print meal_counts	
+			#print meal_counts
 			y5.append(np.mean(meal_counts))
 			#y5_min.append(np.percentile(meal_counts, 5))
 			#y5_max.append(np.percentile(meal_counts, 95))
@@ -1468,7 +1470,7 @@ def refractory_period(data_dict, indivs, period_range, num_samples=100, duration
 
 def power_study_false_pos(trace, num_repeats, duration, figsize=(5,5)):
 	fig, axes = plt.subplots(1, figsize=figsize)
-	
+
 	chol = trace['chol_cov']
 	means = trace['mu']
 
@@ -1504,7 +1506,7 @@ def power_study_false_pos(trace, num_repeats, duration, figsize=(5,5)):
 
 def power_study_false_neg(trace1, trace2, num_repeats, duration, figsize=(5,5)):
 	fig, axes = plt.subplots(1, figsize=figsize)
-	
+
 	chol1 = trace1['chol_cov']
 	means1 = trace1['mu']
 
@@ -1579,6 +1581,3 @@ def power_study_multi_comp(traces, num_repeats, duration, figsize=(5,5)):
 	axes.plot(samplesizes, false_neg)
 
 	return fig, axes
-
-
-			

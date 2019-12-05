@@ -248,7 +248,7 @@ class longpause_only(pm.distributions.Continuous):
 		## Full emptying time
 		t_cs = 2.*tt.sqrt(x0)/k1
 
-		## Stomach fullness
+		## Fullness
 		x = 0.25*tt.sqr(k1*t) - k1*t*tt.sqrt(x0) + x0
 
 		## ll if time is less than full emptying
